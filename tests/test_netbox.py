@@ -15,12 +15,10 @@ from netbox import Nbox
 test_dir = os.path.dirname(__file__)
 test_input = os.path.join(test_dir, "test_files", "test_inputs.yml")
 
-# For docker test environment
-token = "0123456789abcdef0123456789abcdef01234567"
-# netbox_url = "http://10.10.10.104:8000"
-netbox_url = "http://10.30.10.104:8000"
-# netbox_url = "http://10.103.40.120:8000/"
-
+# Default netbox instance, token and SSL verification, falls back to docker version on Orb
+NBOX_URL = os.environ.get("NBOX_URL", "http://netbox.netbox-docker.orb.local")
+NBOX_TOKEN = os.environ.get("NBOX_TOKEN")
+SSL = os.environ.get("SSL", False)
 
 # ----------------------------------------------------------------------------
 # Fixture to initialise Nornir and load inventory
@@ -44,8 +42,8 @@ def load_vars():
 @pytest.fixture(scope="class")
 def load_nbox():
     global nbox, nb, tnt2, cnt_usr, dvc_type, dvc_type1, mftr, vlan, vl_grp, vrf, vrf_rd, pfx, cnt_role, contact, site
-    nbox = Nbox(netbox_url, token, False, [], [], [], [])
-    nb = pynetbox.api(url=netbox_url, token=token)
+    nbox = Nbox(NBOX_URL, NBOX_TOKEN, SSL, [], [], [], [])
+    nb = pynetbox.api(url=NBOX_URL, token=NBOX_TOKEN)
 
     # Creates nbox test objects
     tnt2 = my_vars["tenant"][1]["name"]
