@@ -1,21 +1,32 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 import yaml
 import os
 from collections import defaultdict
+
+from netbox import Nbox
 
 # ----------------------------------------------------------------------------
 # 2. ORG_TNT_SITE_RACK: Creates the DM for organisation objects tenant, site, rack-group and rack
 # ----------------------------------------------------------------------------
 class Organisation:
-    def __init__(self, nbox: "netbox", tenant: List, rack_role: List) -> None:
+    def __init__(
+        self,
+        nbox: Nbox,
+        tenant: list[dict[str, Any]],
+        rack_role: list[dict[str, Any]],
+    ) -> None:
         self.nb = nbox
         self.tenant = tenant
         self.rack_role = rack_role
-        self.tnt, self.site, self.prnt_loc = ([] for i in range(3))
-        self.chld_loc, self.rack, self.rr = ([] for i in range(3))
+        self.tnt: list[dict[str, Any]] = []
+        self.site: list[dict[str, Any]] = []
+        self.prnt_loc: list[dict[str, Any]] = []
+        self.chld_loc: list[dict[str, Any]] = []
+        self.rack: list[dict[str, Any]] = []
+        self.rr: list[dict[str, Any]] = []
 
     # 2a. TNT: Create Tenant dictionary
-    def cr_tnt(self, each_tnt: Dict[str, Any]) -> Dict[str, Any]:
+    def cr_tnt(self, each_tnt: dict[str, Any]) -> dict[str, Any]:
         return dict(
             name=each_tnt["name"],
             slug=self.nb.make_slug(each_tnt.get("slug", each_tnt["name"])),
@@ -25,8 +36,8 @@ class Organisation:
 
     # 2b. SITE: Uses temp dict and joins as the ASN cant be None, it must be an integer.
     def cr_site(
-        self, each_tnt: Dict[str, Any], each_site: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, each_tnt: dict[str, Any], each_site: dict[str, Any]
+    ) -> dict[str, Any]:
         temp_site = dict(
             name=each_site["name"],
             slug=self.nb.make_slug(each_site.get("slug", each_site["name"])),
@@ -44,11 +55,11 @@ class Organisation:
     # 2c. LOCATION: Method run to create parent and child location
     def cr_loc_rack(
         self,
-        each_loc: Dict[str, Any],
-        each_site: Dict[str, Any],
-        each_tnt: Dict[str, Any],
-        parent: Optional[str],
-    ) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+        each_loc: dict[str, Any],
+        each_site: dict[str, Any],
+        each_tnt: dict[str, Any],
+        parent: str | None,
+    ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
 
         tmp_loc = dict(
             name=each_loc["name"],
@@ -84,7 +95,7 @@ class Organisation:
         return tmp_loc, self.rack
 
     # 2e. RR: Rack roles that can be used by a rack. If undefined sets the colour to white as cant be empty
-    def cr_rr(self, each_rr: Dict[str, Any]) -> Dict[str, Any]:
+    def cr_rr(self, each_rr: dict[str, Any]) -> dict[str, Any]:
         return dict(
             name=each_rr["name"],
             slug=self.nb.make_slug(each_rr.get("slug", each_rr["name"])),
@@ -94,7 +105,7 @@ class Organisation:
         )
 
     # ENGINE: Runs all the other methods in this class to create dict used to create nbox objects
-    def create_tnt_site_rack(self) -> Dict[str, Any]:
+    def create_tnt_site_rack(self) -> dict[str, Any]:
         # 2a. TNT: Create Tenant dictionary
         for each_tnt in self.tenant:
             self.tnt.append(self.cr_tnt(each_tnt))
@@ -133,16 +144,23 @@ class Organisation:
 # ----------------------------------------------------------------------------
 class Devices:
     def __init__(
-        self, nbox: "netbox", device_role: List, manufacturer: List, dvc_type_dir: str
+        self,
+        nbox: Nbox,
+        device_role: list[dict[str, Any]],
+        manufacturer: list[dict[str, Any]],
+        dvc_type_dir: str,
     ) -> None:
         self.nb = nbox
         self.device_role = device_role
         self.manufacturer = manufacturer
         self.dvc_type_dir = dvc_type_dir
-        self.dev_role, self.mftr, self.pltm, self.dev_type = ([] for i in range(4))
+        self.dev_role: list[dict[str, Any]] = []
+        self.mftr: list[dict[str, Any]] = []
+        self.pltm: list[dict[str, Any]] = []
+        self.dev_type: list[dict[str, Any]] = []
 
     # 3a. DEV_ROLE: List of device roles for all sites
-    def cr_dev_role(self, each_role: Dict[str, Any]) -> Dict[str, Any]:
+    def cr_dev_role(self, each_role: dict[str, Any]) -> dict[str, Any]:
         return dict(
             name=each_role["name"],
             slug=self.nb.make_slug(each_role.get("slug", each_role["name"])),
@@ -153,7 +171,7 @@ class Devices:
         )
 
     # 3b. MFTR: List of manufacturers for all sites
-    def cr_mftr(self, each_mftr: Dict[str, Any]) -> Dict[str, Any]:
+    def cr_mftr(self, each_mftr: dict[str, Any]) -> dict[str, Any]:
         return dict(
             name=each_mftr["name"],
             slug=self.nb.make_slug(each_mftr.get("slug", each_mftr["name"])),
@@ -162,7 +180,7 @@ class Devices:
         )
 
     # 3c. PLATFORM: List of platforms for the manufacturer. Uses 'if' as platform is optional
-    def cr_pltm(self, mftr: str, each_pltm: Dict[str, Any]) -> Dict[str, Any]:
+    def cr_pltm(self, mftr: str, each_pltm: dict[str, Any]) -> dict[str, Any]:
         return dict(
             name=each_pltm["name"],
             slug=self.nb.make_slug(each_pltm.get("slug", each_pltm["name"])),
@@ -176,11 +194,11 @@ class Devices:
     def cr_conn(
         self,
         model: str,
-        conn_name: str,
+        conn_name: int | str,
         conn_type: str,
-        conn_descr=None,
-        intf_mgmt=None,
-    ) -> Dict[str, Any]:
+        conn_descr: str | None = None,
+        intf_mgmt: bool | None = None,
+    ) -> dict[str, Any]:
         dev_type_obj = dict(
             device_type=dict(model=model), name=conn_name, type=conn_type
         )
@@ -191,7 +209,7 @@ class Devices:
         return dev_type_obj
 
     # 3d. DVC_TYPE: List of device types for the manufacturer. Uses 'if' as device_type is optional
-    def cr_dev_type(self, mftr: str, each_type: Dict[str, Any]) -> Dict[str, Any]:
+    def cr_dev_type(self, mftr: str, each_type: str) -> dict[str, Any]:
         # Lists need to be emptied each loop (dev_type)
         intf, con, pwr, f_port, r_port = ([] for i in range(5))
         with open(os.path.join(self.dvc_type_dir, each_type), "r") as file_content:
@@ -243,7 +261,7 @@ class Devices:
         )
 
     # ENGINE: Runs all the other methods in this class to create dict used to create nbox objects
-    def create_dvc_type_role(self) -> Dict[str, Any]:
+    def create_dvc_type_role(self) -> dict[str, Any]:
         # 3a. DEV_ROLE: Create Device Role dictionary
         for each_role in self.device_role:
             self.dev_role.append(self.cr_dev_role(each_role))
@@ -272,15 +290,22 @@ class Devices:
 # 4. IPAM_VRF_VLAN: Creates the DM for IPAM objects RIR, aggregate, VRF and VLAN
 # ----------------------------------------------------------------------------
 class Ipam:
-    def __init__(self, nbox: "netbox", rir: List, role: List) -> None:
+    def __init__(
+        self, nbox: Nbox, rir: list[dict[str, Any]], role: list[dict[str, Any]]
+    ) -> None:
         self.nb = nbox
         self.ipam_rir = rir
         self.pfx_vlan_role = role
-        self.rir, self.aggr, self.role, self.vlan_grp = ([] for i in range(4))
-        self.vlan, self.vrf, self.pfx = ([] for i in range(3))
+        self.rir: list[dict[str, Any]] = []
+        self.aggr: list[dict[str, Any]] = []
+        self.role: list[dict[str, Any]] = []
+        self.vlan_grp: list[dict[str, Any]] = []
+        self.vlan: list[dict[str, Any]] = []
+        self.vrf: list[dict[str, Any]] = []
+        self.pfx: list[dict[str, Any]] = []
 
     # 4a. RIR: If slug is empty replaces it with tenant name (lowercase) replacing whitespace with '_'
-    def cr_rir(self, each_rir: Dict[str, Any]) -> Dict[str, Any]:
+    def cr_rir(self, each_rir: dict[str, Any]) -> dict[str, Any]:
         return dict(
             name=each_rir["name"],
             slug=self.nb.make_slug(each_rir.get("slug", each_rir["name"])),
@@ -291,8 +316,8 @@ class Ipam:
 
     # 4b. AGGREGATE: Create aggregates that are associated to the RIR
     def cr_aggr(
-        self, each_rir: Dict[str, Any], each_aggr: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, each_rir: dict[str, Any], each_aggr: dict[str, Any]
+    ) -> dict[str, Any]:
         return dict(
             rir=dict(name=each_rir["name"]),
             prefix=each_aggr["prefix"],
@@ -301,7 +326,7 @@ class Ipam:
         )
 
     # 4c. ROLE: Provides segregation of networks (i.e prod, npe, etc), applies to all VLANs and prefixes beneath it
-    def cr_role(self, each_role: Dict[str, Any]) -> Dict[str, Any]:
+    def cr_role(self, each_role: dict[str, Any]) -> dict[str, Any]:
         return dict(
             name=each_role["name"],
             slug=self.nb.make_slug(each_role.get("slug", each_role["name"])),
@@ -310,7 +335,7 @@ class Ipam:
         )
 
     # 4d. VL_GRP: Creates per site VLAN group that holds VLANs that are unique to that group
-    def cr_vl_grp(self, site: str, each_vlgrp: Dict[str, Any]) -> Dict[str, Any]:
+    def cr_vl_grp(self, site: str, each_vlgrp: dict[str, Any]) -> dict[str, Any]:
         return dict(
             name=each_vlgrp["name"],
             slug=self.nb.make_slug(each_vlgrp.get("slug", each_vlgrp["name"])),
@@ -323,11 +348,11 @@ class Ipam:
     def cr_vlan(
         self,
         role: str,
-        site: Optional[str],
-        vl_grp_tnt: str,
-        each_vlgrp: str,
-        each_vl: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        site: str | None,
+        vl_grp_tnt: str | None,
+        each_vlgrp: str | None,
+        each_vl: dict[str, Any],
+    ) -> dict[str, Any]:
         tmp_vlan = dict(
             vid=each_vl["id"],
             name=each_vl["name"],
@@ -345,7 +370,7 @@ class Ipam:
         return tmp_vlan
 
     # 4f. VRF: If defined in the VLAN Group creates VRF
-    def cr_vrf(self, vrf_tnt: str, each_vrf: Dict[str, Any]) -> Dict[str, Any]:
+    def cr_vrf(self, vrf_tnt: str, each_vrf: dict[str, Any]) -> dict[str, Any]:
         tmp_vrf = dict(
             name=each_vrf["name"],
             description=each_vrf.get("descr", ""),
@@ -369,13 +394,13 @@ class Ipam:
     def cr_pfx(
         self,
         role: str,
-        site: str,
+        site: str | None,
         vrf_tnt: str,
-        vlgrp: str,
+        vlgrp: str | None,
         vrf: str,
         vrf_rd: str,
-        each_pfx: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        each_pfx: dict[str, Any],
+    ) -> dict[str, Any]:
         tmp_pfx = dict(
             prefix=each_pfx["pfx"],
             role=dict(name=role),
@@ -400,7 +425,9 @@ class Ipam:
         return tmp_pfx
 
     # FIX_DUP: If VRFs or VL_GRP referenced in multiple diff places in input file, stops it trying to create multiple times (picks first occurrence).
-    def fix_duplicate_obj(self, input_obj: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def fix_duplicate_obj(
+        self, input_obj: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         all_objs = []
         tmp_obj_dict1, tmp_obj_dict2 = (defaultdict(list) for i in range(2))
         # Group all Objects with the same name {name: [{obj_dict}]}
@@ -414,12 +441,12 @@ class Ipam:
                 else:
                     tmp_obj_dict2[each_obj_dm["name"]].append(each_obj_dm)
         # Get first OBJ element as that should be the one with the full details (description, Tags, RTs, etc)
-        for each_obj in tmp_obj_dict2.values():
-            all_objs.append(each_obj[0])
+        for each_grp in tmp_obj_dict2.values():
+            all_objs.append(each_grp[0])
         return all_objs
 
     # ENGINE: Runs all the other methods in this class to create dict used to create nbox objects
-    def create_ipam(self) -> Dict[str, Any]:
+    def create_ipam(self) -> dict[str, Any]:
         # 4a. RIR: Create RIR dictionary
         for each_rir in self.ipam_rir:
             self.rir.append(self.cr_rir(each_rir))
@@ -524,14 +551,21 @@ class Ipam:
 # 5. CRT_PVDR: Creates the DM for Circuit, Provider and Circuit Type
 # ----------------------------------------------------------------------------
 class Circuits:
-    def __init__(self, nbox: "netbox", circuit_type: List, provider: List) -> None:
+    def __init__(
+        self,
+        nbox: Nbox,
+        circuit_type: list[dict[str, Any]],
+        provider: list[dict[str, Any]],
+    ) -> None:
         self.nb = nbox
         self.circuit_type = circuit_type
         self.provider = provider
-        self.crt_type, self.pvdr, self.crt = ([] for i in range(3))
+        self.crt_type: list[dict[str, Any]] = []
+        self.pvdr: list[dict[str, Any]] = []
+        self.crt: list[dict[str, Any]] = []
 
     # 5a. CIRCUIT_TYPE: A classification of circuits
-    def cr_crt_type(self, each_type: Dict[str, Any]) -> Dict[str, Any]:
+    def cr_crt_type(self, each_type: dict[str, Any]) -> dict[str, Any]:
         return dict(
             name=each_type["name"],
             slug=self.nb.make_slug(each_type.get("slug", each_type["name"])),
@@ -540,7 +574,7 @@ class Circuits:
         )
 
     # 5b. PROVIDER: Containers that hold cicuits by the same provider of connectivity (ISP)
-    def cr_pvdr(self, each_pvdr: Dict[str, Any]) -> Dict[str, Any]:
+    def cr_pvdr(self, each_pvdr: dict[str, Any]) -> dict[str, Any]:
         tmp_pvdr = dict(
             name=each_pvdr["name"],
             slug=self.nb.make_slug(each_pvdr.get("slug", each_pvdr["name"])),
@@ -556,8 +590,8 @@ class Circuits:
 
     # 5c. CIRCUIT: Each circuit belongs to a provider and must be assigned a circuit ID which is unique to that provider
     def cr_crt(
-        self, each_pvdr: Dict[str, Any], each_crt: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, each_pvdr: dict[str, Any], each_crt: dict[str, Any]
+    ) -> dict[str, Any]:
         tmp_crt = dict(
             cid=str(each_crt["cid"]),
             type=dict(name=each_crt["type"]),
@@ -574,7 +608,7 @@ class Circuits:
         return tmp_crt
 
     # ENGINE: Runs all the other methods in this class to create dict used to create nbox objects
-    def create_crt_pvdr(self) -> Dict[str, Any]:
+    def create_crt_pvdr(self) -> dict[str, Any]:
         # 5a. CRT_TYPE: Create Circuit Type dictionary
         for each_type in self.circuit_type:
             self.crt_type.append(self.cr_crt_type(each_type))
@@ -592,14 +626,21 @@ class Circuits:
 # 6. VIRTUAL: Creates the DM for Cluster, cluster type and cluster group
 # ----------------------------------------------------------------------------
 class Virtualisation:
-    def __init__(self, nbox: "netbox", cluster_group: List, cluster_type: List) -> None:
+    def __init__(
+        self,
+        nbox: Nbox,
+        cluster_group: list[dict[str, Any]],
+        cluster_type: list[dict[str, Any]],
+    ) -> None:
         self.nb = nbox
         self.cluster_group = cluster_group
         self.cluster_type = cluster_type
-        self.cltr_type, self.cltr, self.cltr_grp = ([] for i in range(3))
+        self.cltr_type: list[dict[str, Any]] = []
+        self.cltr: list[dict[str, Any]] = []
+        self.cltr_grp: list[dict[str, Any]] = []
 
     # 6a. CLUSTER_GROUP: Optional, can be used to group clusters such as by region. Only required if used in clusters
-    def cr_cltr_grp(self, each_grp: Dict[str, Any]) -> Dict[str, Any]:
+    def cr_cltr_grp(self, each_grp: dict[str, Any]) -> dict[str, Any]:
         return dict(
             name=each_grp["name"],
             slug=self.nb.make_slug(each_grp.get("slug", each_grp["name"])),
@@ -608,7 +649,7 @@ class Virtualisation:
         )
 
     # 6b. CLUSTER_TYPE: Represents a technology or mechanism by which to group clusters
-    def cr_cltr_type(self, each_type: Dict[str, Any]) -> Dict[str, Any]:
+    def cr_cltr_type(self, each_type: dict[str, Any]) -> dict[str, Any]:
         return dict(
             name=each_type["name"],
             slug=self.nb.make_slug(each_type.get("slug", each_type["name"])),
@@ -618,8 +659,8 @@ class Virtualisation:
 
     # 6c. CLUSTERS: Holds VMs and physical resources which hosts VMs
     def cr_cltr(
-        self, each_type: Dict[str, Any], each_cltr: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, each_type: dict[str, Any], each_cltr: dict[str, Any]
+    ) -> dict[str, Any]:
         tmp_cltr = dict(
             name=each_cltr["name"],
             type=dict(name=each_type["name"]),
@@ -643,7 +684,7 @@ class Virtualisation:
         elif each_type.get("tenant") == None:
             try:
                 site = each_cltr.get("site", type_site)
-                type_tnt = dict(self.nb.dcim.sites.get(name=site))["tenant"]["name"]
+                type_tnt = dict(self.nb.nb.dcim.sites.get(name=site))["tenant"]["name"]
             except:
                 type_tnt = None
         if each_cltr.get("tenant", type_tnt) != None:
@@ -651,7 +692,7 @@ class Virtualisation:
         return tmp_cltr
 
     # ENGINE: Runs all the other methods in this class to create dict used to create nbox objects
-    def create_vrtl(self) -> Dict[str, Any]:
+    def create_vrtl(self) -> dict[str, Any]:
         # 6a. CLTR_GRP: Create Cluster Group dictionary
         if self.cluster_group != None:
             for each_grp in self.cluster_group:
@@ -673,19 +714,22 @@ class Virtualisation:
 class Contacts:
     def __init__(
         self,
-        nbox: "netbox",
-        contact_role: List,
-        contact_grp: List,
-        contact_assign: List,
+        nbox: Nbox,
+        contact_role: list[dict[str, Any]],
+        contact_grp: list[dict[str, Any]],
+        contact_assign: list[dict[str, Any]],
     ) -> None:
         self.nb = nbox
         self.contact_role = contact_role
         self.contact_grp = contact_grp
         self.contact_assign = contact_assign
-        self.cnt_role, self.cnt_grp, self.cnt, self.cnt_asgn = ([] for i in range(4))
+        self.cnt_role: list[dict[str, Any]] = []
+        self.cnt_grp: list[dict[str, Any]] = []
+        self.cnt: list[dict[str, Any]] = []
+        self.cnt_asgn: list[dict[str, Any]] = []
 
     # 7a. CNT_ROLE: List of contact roles
-    def cr_cnt_role(self, each_role: Dict[str, Any]) -> Dict[str, Any]:
+    def cr_cnt_role(self, each_role: dict[str, Any]) -> dict[str, Any]:
         return dict(
             name=each_role["name"],
             slug=self.nb.make_slug(each_role.get("slug", each_role["name"])),
@@ -694,7 +738,7 @@ class Contacts:
         )
 
     # 7b. CNT_GRP: List of contact groups
-    def cr_cnt_grp(self, each_grp: Dict[str, Any]) -> Dict[str, Any]:
+    def cr_cnt_grp(self, each_grp: dict[str, Any]) -> dict[str, Any]:
         return dict(
             name=each_grp["name"],
             slug=self.nb.make_slug(each_grp.get("slug", each_grp["name"])),
@@ -704,7 +748,7 @@ class Contacts:
         )
 
     # 7c. CNT: List of contacts
-    def cr_cnt(self, grp: str, each_cnt: Dict[str, Any]) -> Dict[str, Any]:
+    def cr_cnt(self, grp: str, each_cnt: dict[str, Any]) -> dict[str, Any]:
         tmp_cnt = dict(
             name=each_cnt["name"],
             group=dict(name=grp),
@@ -722,7 +766,7 @@ class Contacts:
         return tmp_cnt
 
     # 7d. ASGN: List of contact assignments
-    def cr_cnt_asgn(self, each_asgn: Dict[str, Any]) -> Dict[str, Any]:
+    def cr_cnt_asgn(self, each_asgn: dict[str, Any]) -> list[dict[str, Any]]:
         tmp_asgn = []
         for obj_type, obj in each_asgn["assign_to"].items():
             if "circuit" in obj_type or "provider" in obj_type:
@@ -745,7 +789,7 @@ class Contacts:
         return tmp_asgn
 
     # ENGINE: Runs all the other methods in this class to create dict used to create nbox objects
-    def create_contact(self) -> Dict[str, Any]:
+    def create_contact(self) -> dict[str, Any]:
         # 7a. ROLE: Creates the Rack roles dictionary that can be used by a rack.
         for each_role in self.contact_role:
             self.cnt_role.append(self.cr_cnt_role(each_role))
