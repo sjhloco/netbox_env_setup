@@ -1,13 +1,14 @@
+import ast
+import operator
+from collections import defaultdict
 from multiprocessing.connection import Listener
 from typing import Any, cast
+
 import pynetbox
+import urllib3  # type: ignore[import-untyped]
 from pynetbox.core.query import RequestError
-import operator
-import ast
 from rich.console import Console
 from rich.theme import Theme
-from collections import defaultdict
-import urllib3
 
 urllib3.disable_warnings()
 
@@ -25,7 +26,7 @@ class Nbox:
         tag_created: list[str],
         rt_exists: list[str],
         rt_created: list[str],
-    ):
+    ) -> None:
         self.nb = pynetbox.api(url=netbox_url, token=token)
         self.nb.http_session.verify = ssl
         my_theme = {"repr.ipv4": "none", "repr.number": "none", "repr.call": "none"}
@@ -53,10 +54,10 @@ class Nbox:
             # GET: Majority of API calls will produce one result (as most objects unique) so can use the get method
             try:
                 # GBL_VRF: If in Netbox global VRF ignore (name null)
-                if api_attr == "ipam.vrfs" and each_obj_dm["name"] == None:
+                if api_attr == "ipam.vrfs" and each_obj_dm["name"] is None:
                     pass
                 # If not exist add DM for object to list to be created
-                elif operator.attrgetter(api_attr)(self.nb).get(**fltr) == None:
+                elif operator.attrgetter(api_attr)(self.nb).get(**fltr) is None:
                     obj_notexist_dm.append(each_obj_dm)
                 # If object exists various methods used to add name to list for stdout
                 else:
@@ -67,21 +68,22 @@ class Nbox:
                     else:
                         try:
                             obj_exist_name.append(each_obj_dm[obj_fltr])
-                        except:
+                        except KeyError:
                             obj_exist_name.append(
                                 each_obj_dm.get(each_obj_dm["obj_fltr"], "")
                             )
-            # FLTR: For odd excpetion where objects not unique uses the filter method
-            except:
+            # FLTR: For odd exception where objects not unique uses the filter method
+            except ValueError:
                 obj_result = list(operator.attrgetter(api_attr)(self.nb).filter(**fltr))
                 for each_rslt in obj_result:
                     # GBL_VRF_PFX: To differentiate between prefixes in null and in VRFs
-                    if api_attr == "ipam.prefixes":
-                        # breakpoint()
-                        if each_rslt["vrf"] == fltr.get("vrf_id", fltr.get("vrf")):
-                            obj_exist_name.append(each_obj_dm[obj_fltr])
-                        elif each_rslt["vrf"]["id"] == fltr.get("vrf_id", fltr.get("vrf")):
-                            obj_exist_name.append(each_obj_dm[obj_fltr])
+                    if api_attr == "ipam.prefixes" and (
+                        each_rslt["vrf"] == fltr.get("vrf_id", fltr.get("vrf"))
+                        or each_rslt["vrf"]["id"] == fltr.get(
+                            "vrf_id", fltr.get("vrf")
+                        )
+                    ):
+                        obj_exist_name.append(each_obj_dm[obj_fltr])
 
         return dict(notexist_dm=obj_notexist_dm, exist_name=obj_exist_name)
 
@@ -105,7 +107,9 @@ class Nbox:
                 for err in err_msg["errors"]:
                     if len(err) != 0:  # safe guards against empty dicts
                         for obj, msg in err["errors"].items():
-                            self.rc.print(f":x: {output_name} '{obj}' - {', '.join(msg)}")
+                            self.rc.print(
+                                f":x: {output_name} '{obj}' - {', '.join(msg)}"
+                            )
         # If result variable exists means an object was created
         if "result" in locals():
             all_result = result
@@ -233,7 +237,7 @@ class Nbox:
         error: dict[str, list[str]],
     ) -> dict[str, Any] | None:
         # VL_SITE: If no VLAN Group uses site ID instead to see if exists
-        if api_attr[0] == "ipam.vlans" and obj_dm.get("group") == None:
+        if api_attr[0] == "ipam.vlans" and obj_dm.get("group") is None:
             obj_fltr[1] = "site_id"
             api_attr[1] = "dcim.sites"
         # VL_GRP/VRF EXIST: Checks if VLAN_GRP or VRF exists, if so gets the id
@@ -244,14 +248,14 @@ class Nbox:
         else:
             fltr = dict(name=grp_site_vrf_name)
         # GBL_VRF: If in the netbox global routing table no need to get VRF ID
-        if api_attr[0] == "ipam.prefixes" and obj_dm["vrf"]["name"] == None:
+        if api_attr[0] == "ipam.prefixes" and obj_dm["vrf"]["name"] is None:
             obj_dm["vrf"] = None
             fltr = {obj_fltr[0]: obj_dm[obj_fltr[0]], "vrf": None}
             obj_dm["chk_fltr"] = fltr
             # Used to by object_chk to add name of VLAN/PFX to exist list (obj["exist_name"])
             obj_dm["multi-fltr"] = obj_dm[obj_fltr[0]]
             return obj_dm
-        elif operator.attrgetter(api_attr[1])(self.nb).get(**fltr) != None:
+        elif operator.attrgetter(api_attr[1])(self.nb).get(**fltr) is not None:
             obj_id = operator.attrgetter(api_attr[1])(self.nb).get(**fltr).id
             # Adds object-id for VRF used for creating prefixes (not used if not VRF)
             obj_dm["vrf"] = obj_id
@@ -266,7 +270,7 @@ class Nbox:
             return obj_dm
 
         # ERROR: If VRF or VL_GRP dont exist collects details for message (cant create VLAN/PFX without them)
-        elif operator.attrgetter(api_attr[1])(self.nb).get(**fltr) == None:
+        elif operator.attrgetter(api_attr[1])(self.nb).get(**fltr) is None:
             vl_pfx_name = obj_dm[obj_fltr[0]]
             error[grp_site_vrf_name].append(vl_pfx_name)
         return None
@@ -277,13 +281,13 @@ class Nbox:
     def get_vl_pfx_id(
         self, obj_dm: dict[str, Any], error: dict[str, list[str]]
     ) -> dict[str, Any] | None:
-        if obj_dm.get("vlan") == None:
+        if obj_dm.get("vlan") is None:
             return obj_dm
         # GET_VLAN_ID: If pfx has a vlan, if vl_grp or site exists gets the VLAN ID and add it to the dict
-        elif obj_dm.get("vlan") != None:
+        elif obj_dm.get("vlan") is not None:
             vlan = obj_dm["vlan"]
             # VL_GRP VLAN ID
-            if obj_dm.get("vl_grp") != None:
+            if obj_dm.get("vl_grp") is not None:
                 vl_grp = obj_dm["vl_grp"]
                 try:
                     vl_grp_slug = self.nb.ipam.vlan_groups.get(name=vl_grp)["slug"]
@@ -292,11 +296,11 @@ class Nbox:
                     ).id
                     return obj_dm
                 # VLAN_NOT_EXIST: If the vlan does not exists collects details for message
-                except:
+                except (TypeError, AttributeError):
                     pfx = obj_dm["prefix"]
                     error[vl_grp].append(f"{pfx} 'VLAN {vlan}'")
             # SITE VLAN ID
-            elif obj_dm.get("site") != None:
+            elif obj_dm.get("site") is not None:
                 try:
                     site_id = self.nb.dcim.sites.get(**obj_dm["site"]).id
                     obj_dm["vlan"] = self.nb.ipam.vlans.get(
@@ -304,7 +308,7 @@ class Nbox:
                     ).id
                     return obj_dm
                 # VLAN_NOT_EXIST: If the vlan does not exists collects details for message
-                except:
+                except AttributeError:
                     pfx = obj_dm["prefix"]
                     error[vl_grp].append(f"{pfx} 'VLAN {vlan}'")
         return None
@@ -340,13 +344,13 @@ class Nbox:
                         "contact_id": cnt_id,
                     }
                     # IDNTY: Used to identify obj in the already exist list (obj["exist_name"])
-                    asgn_copy[
-                        "multi-fltr"
-                    ] = f"{each_cnt} {asgn['object_id']} ({asgn['object_type'].split('.')[1]})"
+                    asgn_copy["multi-fltr"] = (
+                        f"{each_cnt} {asgn['object_id']} ({asgn['object_type'].split('.')[1]})"
+                    )
                     tmp_asgn.append(asgn_copy)
-                except:
+                except AttributeError:
                     error.append(f"content - {each_cnt}")
-        except:
+        except AttributeError:
             error.append(f"{asgn['object_type'].split('.')[1]} - {asgn['object_id']}")
 
         return tmp_asgn
@@ -380,7 +384,7 @@ class Nbox:
                 tmp = self.get_vlgrp_site_vrf_id(
                     api_attr, obj_fltr, each_obj_dm, vlgrp_vrf_err
                 )
-                if tmp != None:
+                if tmp is not None:
                     vlgrp_vrf_obj_dm.append(tmp)
             if len(vlgrp_vrf_err) != 0:
                 api_name = api_attr[1].split(".")[1][:-1]
@@ -406,14 +410,14 @@ class Nbox:
                     cnt_asgn_obj_dm.extend(
                         self.get_cnt_asgn_id(each_asgn, tmp_fltr, cnt_asgn_err)
                     )
-                except:
+                except:  # noqa: E722 - unclear which exception get_cnt_asgn_id can still raise here, it already swallows lookup failures internally
                     # SLUG: Try get ID of the object the contact is to be assigned to using object slug
                     try:
                         cnt_asgn_obj_dm.extend(
                             self.get_cnt_asgn_id(each_asgn, "slug", cnt_asgn_err)
                         )
                     # If cant get the ID add object to error list
-                    except:
+                    except:  # noqa: E722 - same as above
                         cnt_asgn_err.append(
                             f"{each_asgn['object_type'].split('.')[1]} - {each_asgn['object_id']}"
                         )
@@ -435,7 +439,7 @@ class Nbox:
                 vl_pfx_err: defaultdict[str, list[str]] = defaultdict(list)
                 for each_obj_dm in obj["notexist_dm"]:
                     tmp = self.get_vl_pfx_id(each_obj_dm, vl_pfx_err)
-                    if tmp != None:
+                    if tmp is not None:
                         vl_pfx_obj.append(tmp)
                 if len(vl_pfx_err) != 0:
                     for vlgrp, pfx_vl in vl_pfx_err.items():
@@ -460,7 +464,7 @@ class Nbox:
     # TAGS: Gathers ID of existing tag or creates new one and returns ID (list of IDs)
     def get_or_create_tag(self, tag: dict[str, Any] | None) -> list:
         tags = []
-        if tag != None:
+        if tag is not None:
             for name, colour in tag.items():
                 name = str(name)
                 tag_obj = self.nb.extras.tags.get(name=name)
@@ -475,13 +479,11 @@ class Nbox:
         return tags
 
     # RT: Gathers ID of existing RT or creates new one and returns ID (list of IDs)
-    def get_or_create_rt(
-        self, rt: list | dict[str, str] | None, tnt: str
-    ) -> list:
+    def get_or_create_rt(self, rt: list | dict[str, str] | None, tnt: str) -> list:
         all_rt = []
         if isinstance(rt, list):
             rt = dict.fromkeys(rt, "")
-        if rt != None:
+        if rt is not None:
             for name, descr in rt.items():
                 rt_obj = self.nb.ipam.route_targets.get(name=name)
                 if not rt_obj:
@@ -499,7 +501,9 @@ class Nbox:
         return all_rt
 
     # PRINT_TAG_RT: Prints the result of existing and newly created tags
-    def print_tag_rt(self, input_msg: str, exists: set[str], created: list[str]) -> None:
+    def print_tag_rt(
+        self, input_msg: str, exists: set[str], created: list[str]
+    ) -> None:
         if len(created) != 0:
             self.rc.print(
                 f":white_check_mark: {input_msg}: '{', '.join(created)}' successfully created"
@@ -516,15 +520,17 @@ class Nbox:
     # TNT: Gets the tennat name for a a site fed into it (if API call fails leaves blank)
     def get_tnt(self, site: str) -> str | None:
         try:
-            return cast("str", dict(self.nb.dcim.sites.get(name=site))["tenant"]["name"])
-        except:
+            return cast(
+                "str", dict(self.nb.dcim.sites.get(name=site))["tenant"]["name"]
+            )
+        except (TypeError, RequestError):
             return None
 
     # NAME_NONE: Removes name from netbox filter if its value is None
     def name_none(
         self, name_value: str | None, full_key_value: dict[str, Any]
     ) -> dict[str, Any] | None:
-        if name_value == None:
+        if name_value is None:
             return name_value
         else:
             return full_key_value

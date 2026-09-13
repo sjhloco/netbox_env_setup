@@ -1,15 +1,15 @@
-"""
-## Netbox Base - Setup the base netbox environment
+"""Netbox Base - Setup the base netbox environment.
+
 Creates the environment within NetBox ready for adding devices, it does not add the devices themselves.
 This script is not idempotent. Its purpose to add objects rather than edit or delete existing objects.
 The environment is defined in YAML files (opens all from defined directory) that follows the hierarchical structure of NetBox.
 
-2. ORG_TNT_SITE_RACK: Create all the organisation objects
-3. DVC_MTFR_TYPE: Create all the objects required to create devices
-4. IPAM_VRF_VLAN: Create all the IPAM objects
-5. CRT_PVDR: Create all the Circuit objects
-6. VIRTUAL: Creates all the Cluster objects
-7. CONTACT: Creates all the Contacts and associates them to objects
+1. ORG_TNT_SITE_RACK: Create all the organisation objects
+2. DVC_MTFR_TYPE: Create all the objects required to create devices
+3. IPAM_VRF_VLAN: Create all the IPAM objects
+4. CRT_PVDR: Create all the Circuit objects
+5. VIRTUAL: Creates all the Cluster objects
+6. CONTACT: Creates all the Contacts and associates them to objects
 
 It is advisable to run the validation script against the input file to ensure the formatting of the input file is correct
 python input_validate.py test.yml
@@ -19,22 +19,17 @@ python nbox_env_setup.py simple_example
 """
 
 import argparse
-from collections import defaultdict
-from typing import Any, Dict
-import sys
-import yaml
 import os
+import sys
+from collections import defaultdict
+from typing import Any
+
+import yaml
 from rich.console import Console
 from rich.theme import Theme
-import ipdb
 
+from dm import Circuits, Contacts, Devices, Ipam, Organisation, Virtualisation
 from netbox import Nbox
-from dm import Organisation
-from dm import Devices
-from dm import Ipam
-from dm import Circuits
-from dm import Virtualisation
-from dm import Contacts
 
 # ----------------------------------------------------------------------------
 # ENV VARS: Either set as env vars or fallback to defaults
@@ -42,9 +37,14 @@ from dm import Contacts
 # Default netbox instance, falls back to docker version on Orb
 NBOX_URL = os.environ.get("NBOX_URL", "http://netbox.netbox-docker.orb.local")
 # Netbox API token (don't include Bearer, just the token) created under user profile
-NBOX_TOKEN = os.environ.get("NBOX_TOKEN")
+NBOX_TOKEN = os.environ.get("NBOX_TOKEN", "")
 # By default use HTTP, if using Self-signed cert disable SSL verification (nb.http_session.verify = False) or specify the CA cert
-SSL = os.environ.get("SSL", False)
+_ssl_env = os.environ.get("SSL", False)
+SSL: bool = (
+    _ssl_env
+    if isinstance(_ssl_env, bool)
+    else _ssl_env.strip().lower() in ("1", "true", "yes")
+)
 # os.environ['REQUESTS_CA_BUNDLE'] = os.path.expanduser('~/Documents/Coding/Netbox/nbox_py_scripts/myCA.pem')
 # Directory that holds all device type templates (mentioned in the script)
 DVC_TYPE_DIR = os.environ.get("DVC_TYPE_DIR", os.path.join(os.getcwd(), "device_type"))
@@ -52,17 +52,16 @@ DVC_TYPE_DIR = os.environ.get("DVC_TYPE_DIR", os.path.join(os.getcwd(), "device_
 INPUT_DIR = os.environ.get("INPUT_DIR", os.getcwd())
 
 
-
 # ----------------------------------------------------------------------------
 # 1. Gathers input arguments as well as loading and validating the input file
 # ----------------------------------------------------------------------------
 class Inputs:
-    def __init__(self) -> Dict[str, Any]:
+    def __init__(self) -> None:
         my_theme = {"repr.ipv4": "none", "repr.number": "none", "repr.call": "none"}
         self.rc = Console(theme=Theme(my_theme))
 
     # 1a. ARG: Gather input args and file name
-    def arg_parser(self) -> Dict[str, Any]:
+    def arg_parser(self) -> tuple[dict[str, Any], str]:
         args = argparse.ArgumentParser()
         args.add_argument(
             "-o",
@@ -110,10 +109,10 @@ class Inputs:
         return vars(all_args), tmp_input_dir
 
     # 1b. FILE: Loads input file and validates it
-    def input_val(self, input_dir: str, args: Dict[str, Any]) -> Dict[str, Any]:
+    def input_val(self, input_dir: str, args: dict[str, Any]) -> dict[str, Any]:
         # VAL_DIR: Check directory exists incurrent location or base directory
-        if os.path.exists(input_dir) == False:
-            if os.path.exists(INPUT_DIR) == False:
+        if not os.path.exists(input_dir):
+            if not os.path.exists(INPUT_DIR):
                 self.rc.print(
                     f":x: Input File Error - Input file directories '{os.path.join(os.getcwd(), input_dir)}' "
                     f"or '{INPUT_DIR}' do not exist."
@@ -123,58 +122,56 @@ class Inputs:
                 input_dir = os.path.join(INPUT_DIR)
 
         # LOAD_FILE: Load the variable files
-        my_vars = {}
+        my_vars: dict[str, Any] = {}
         for filename in os.listdir(input_dir):
             if filename.endswith(".yml") or filename.endswith(".yaml"):
-                with open(os.path.join(input_dir, filename), "r") as file_content:
+                with open(os.path.join(input_dir, filename)) as file_content:
                     my_vars.update(yaml.load(file_content, Loader=yaml.FullLoader))
         # VAL_FILE: Validates the input dicts needed for the specified flags are present
-        val = dict(
-            organisation=("tenant", "rack_role"),
-            device=("device_role", "manufacturer"),
-            ipam=("rir", "role"),
-            provider=("circuit_type", "provider"),
-            virtual=("cluster_group", "cluster_type"),
-            contact=("contact_role", "contact_group", "contact_assign"),
-        )
-        error = defaultdict(list)
-        for flag, dicts in val.items():
-            if args[flag] != False:
-                for each_dict in dicts:
-                    try:
-                        assert my_vars.get(each_dict) != None
-                    except AssertionError:
-                        error[flag].append(each_dict)
-        if len(error) != 0:
-            for flag, dicts in error.items():
+        val: dict[str, tuple[str, ...]] = {
+            "organisation": ("tenant", "rack_role"),
+            "device": ("device_role", "manufacturer"),
+            "ipam": ("rir", "role"),
+            "provider": ("circuit_type", "provider"),
+            "virtual": ("cluster_group", "cluster_type"),
+            "contact": ("contact_role", "contact_group", "contact_assign"),
+        }
+        missing_dicts: defaultdict[str, list[str]] = defaultdict(list)
+        for flag, required_dicts in val.items():
+            if args[flag]:
+                for each_dict in required_dicts:
+                    if my_vars.get(each_dict) is None:
+                        missing_dicts[flag].append(each_dict)
+        if missing_dicts:
+            for flag, missing_dict_list in missing_dicts.items():
                 self.rc.print(
-                    f":x: Input Error - The input flag '{flag}' requires dictionaries '{', '.join(list(dicts))}' in the input files"
+                    f":x: Input Error - The input flag '{flag}' requires dictionaries '{', '.join(missing_dict_list)}' in the input files"
                 )
             sys.exit(1)
-        elif len(error) == 0:
-            return my_vars
+        return my_vars
 
 
 # ----------------------------------------------------------------------------
 # ENGINE: Runs the methods of the script, first creating data-model and using to create non-existant objects
 # ----------------------------------------------------------------------------
-def main():
+def main() -> None:
     # 1. ARG_FILE_NBOX: Gathers input flags (args), input file variables (dicts) and initialises the Netbox connection (nbox)
     arg_vars = Inputs()
     args, input_dir = arg_vars.arg_parser()
     my_vars = arg_vars.input_val(input_dir, args)
     # Initialise Netbox class used to run Netbox API calls
-    tag_exists, tag_created, rt_exists, rt_created = ([] for i in range(4))
+    tag_exists: list[str] = []
+    tag_created: list[str] = []
+    rt_exists: list[str] = []
+    rt_created: list[str] = []
     nbox = Nbox(
         NBOX_URL, NBOX_TOKEN, SSL, tag_exists, tag_created, rt_exists, rt_created
     )
     # Used to run all object creation classes if no flags input
-    flag_all = False
-    for flag_bool in args.values():
-        flag_all = flag_all + flag_bool
+    flag_all = any(args.values())
 
     # 2. ORG_TNT_SITE_RACK: Create all the organisation objects
-    if args["organisation"] == True or flag_all == False:
+    if args["organisation"] or not flag_all:
         org = Organisation(nbox, my_vars["tenant"], my_vars["rack_role"])
         org_dict = org.create_tnt_site_rack()
         # Passed into nbox_call are: Friendly name (for user message), path of api call, filter (to check if object already exists), DM of data
@@ -186,7 +183,7 @@ def main():
         nbox.engine("Rack", "dcim.racks", "name", org_dict["rack"])
 
     # 3. DVC_MTFR_TYPE: Create all the objects required to create devices
-    if args["device"] == True or flag_all == False:
+    if args["device"] or not flag_all:
         dvc = Devices(
             nbox, my_vars["device_role"], my_vars["manufacturer"], DVC_TYPE_DIR
         )
@@ -198,7 +195,7 @@ def main():
         nbox.engine("Device-type", "dcim.device_types", "model", dvc_dict["dev_type"])
 
     # 4. IPAM_VRF_VLAN: Create all the IPAM objects
-    if args["ipam"] == True or flag_all == False:
+    if args["ipam"] or not flag_all:
         ipam = Ipam(nbox, my_vars["rir"], my_vars["role"])
         ipam_dict = ipam.create_ipam()
         # print(ipam_dict)
@@ -225,7 +222,7 @@ def main():
         )
 
     # 5. CRT_PVDR: Create all the Circuit objects
-    if args["provider"] == True or flag_all == False:
+    if args["provider"] or not flag_all:
         crt = Circuits(nbox, my_vars["circuit_type"], my_vars["provider"])
         crt_dict = crt.create_crt_pvdr()
         # Passed into nbox_call are: Friendly name (for user message), path of api call, filter (to check if object already exists), DM of data
@@ -236,7 +233,7 @@ def main():
         nbox.engine("Circuit", "circuits.circuits", "cid", crt_dict["crt"])
 
     # 6. VIRTUAL: Creates all the Cluster objects
-    if args["virtual"] == True or flag_all == False:
+    if args["virtual"] or not flag_all:
         vrtl = Virtualisation(nbox, my_vars["cluster_group"], my_vars["cluster_type"])
         vrtl_dict = vrtl.create_vrtl()
         # Passed into nbox_call are: Friendly name (for user message), path of api call, filter (to check if object already exists), DM of data
@@ -255,7 +252,7 @@ def main():
         nbox.engine("Cluster", "virtualization.clusters", "name", vrtl_dict["cltr"])
 
     # 7. CONTACTS: Creates all the contacts and assigns to objects
-    if args["contact"] == True or flag_all == False:
+    if args["contact"] or not flag_all:
         cnt = Contacts(
             nbox,
             my_vars["contact_role"],

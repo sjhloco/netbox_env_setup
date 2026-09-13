@@ -1,9 +1,12 @@
-from typing import Any
-import yaml
 import os
 from collections import defaultdict
+from typing import Any
+
+import yaml
+from pynetbox.core.query import RequestError
 
 from netbox import Nbox
+
 
 # ----------------------------------------------------------------------------
 # 2. ORG_TNT_SITE_RACK: Creates the DM for organisation objects tenant, site, rack-group and rack
@@ -48,7 +51,7 @@ class Organisation:
             physical_address=each_site.get("addr", ""),
             tags=self.nb.get_or_create_tag(each_site.get("tags")),
         )
-        if each_site.get("ASN") != None:
+        if each_site.get("ASN") is not None:
             temp_site["asn"] = each_site["ASN"]
         return temp_site
 
@@ -68,14 +71,14 @@ class Organisation:
             description=each_loc.get("descr", ""),
             tags=self.nb.get_or_create_tag(each_loc.get("tags")),
         )
-        if parent != None:
+        if parent is not None:
             tmp_loc["parent"] = dict(name=parent)
             self.chld_loc.append(tmp_loc)
-        elif parent == None:
+        elif parent is None:
             self.prnt_loc.append(tmp_loc)
 
         # 2d. RACK: Creates list of racks within the location
-        if each_loc.get("rack") != None:
+        if each_loc.get("rack") is not None:
             for each_rack in each_loc["rack"]:
                 temp_rack = dict(
                     name=each_rack["name"],
@@ -88,7 +91,7 @@ class Organisation:
                     tags=self.nb.get_or_create_tag(each_rack.get("tags")),
                 )
                 # Needed as Role cant be blank
-                if each_rack.get("role") != None:
+                if each_rack.get("role") is not None:
                     temp_rack["role"] = dict(name=each_rack["role"])
                 self.rack.append(temp_rack)
         # Only returned for unittesting
@@ -113,11 +116,11 @@ class Organisation:
             for each_site in each_tnt.get("site", []):
                 self.site.append(self.cr_site(each_tnt, each_site))
                 # 2c. LOC_RACK: Creates list of locations and racks at the site
-                if each_site.get("location") != None:
+                if each_site.get("location") is not None:
                     for each_loc in each_site["location"]:
                         self.cr_loc_rack(each_loc, each_site, each_tnt, None)
                         # 2d. NESTED_LOC_RACK: List of nested locations and racks within them
-                        if each_loc.get("location") != None:
+                        if each_loc.get("location") is not None:
                             for each_child_loc in each_loc["location"]:
                                 self.cr_loc_rack(
                                     each_child_loc,
@@ -202,9 +205,9 @@ class Devices:
         dev_type_obj = dict(
             device_type=dict(model=model), name=conn_name, type=conn_type
         )
-        if conn_descr != None:
+        if conn_descr is not None:
             dev_type_obj.update(dict(description=conn_descr))
-        if intf_mgmt != None:
+        if intf_mgmt is not None:
             dev_type_obj.update(dict(mgmt_only=intf_mgmt))
         return dev_type_obj
 
@@ -212,7 +215,7 @@ class Devices:
     def cr_dev_type(self, mftr: str, each_type: str) -> dict[str, Any]:
         # Lists need to be emptied each loop (dev_type)
         intf, con, pwr, f_port, r_port = ([] for i in range(5))
-        with open(os.path.join(self.dvc_type_dir, each_type), "r") as file_content:
+        with open(os.path.join(self.dvc_type_dir, each_type)) as file_content:
             dev_type_tmpl = yaml.load(file_content, Loader=yaml.FullLoader)
 
         # Create lists of interfaces, consoles, power, front_ports and rear_ports
@@ -269,11 +272,11 @@ class Devices:
         for each_mftr in self.manufacturer:
             self.mftr.append(self.cr_mftr(each_mftr))
             # 3c. PLATFORM: Create Platform dictionary
-            if each_mftr.get("platform") != None:
+            if each_mftr.get("platform") is not None:
                 for each_pltm in each_mftr["platform"]:
                     self.pltm.append(self.cr_pltm(each_mftr["name"], each_pltm))
             # 3d. DEV_TYPE: Create Device Type dictionary
-            if each_mftr.get("device_type") != None:
+            if each_mftr.get("device_type") is not None:
                 for each_type in each_mftr["device_type"]:
                     self.dev_type.append(self.cr_dev_type(each_mftr["name"], each_type))
 
@@ -363,9 +366,9 @@ class Ipam:
             description=each_vl.get("descr", ""),
             tags=self.nb.get_or_create_tag(each_vl.get("tags")),
         )
-        if each_vlgrp != None:
+        if each_vlgrp is not None:
             tmp_vlan["group"] = dict(name=each_vlgrp)
-        elif site != None:
+        elif site is not None:
             tmp_vlan["site"] = dict(name=site)
         return tmp_vlan
 
@@ -386,7 +389,7 @@ class Ipam:
                 vrf_tnt,
             ),
         )
-        if each_vrf.get("rd") != None:
+        if each_vrf.get("rd") is not None:
             tmp_vrf["rd"] = each_vrf["rd"]
         return tmp_vrf
 
@@ -414,13 +417,13 @@ class Ipam:
             ),
             tags=self.nb.get_or_create_tag(each_pfx.get("tags")),
         )
-        if site == None:
+        if site is None:
             tmp_pfx["site"] = site
-        elif site != None:
+        elif site is not None:
             tmp_pfx["site"] = dict(name=site)
-        if vlgrp != None:
+        if vlgrp is not None:
             tmp_pfx["vl_grp"] = vlgrp
-        if each_pfx.get("vl") != None:
+        if each_pfx.get("vl") is not None:
             tmp_pfx["vlan"] = each_pfx["vl"]
         return tmp_pfx
 
@@ -436,7 +439,7 @@ class Ipam:
         # From the Objects with same name if RD group {name: [{obj_dict}]} else add {name: [{obj_dict}]} again
         for obj_dm in tmp_obj_dict1.values():
             for each_obj_dm in obj_dm:
-                if each_obj_dm.get("rd") != None:
+                if each_obj_dm.get("rd") is not None:
                     tmp_obj_dict2[each_obj_dm["rd"]].append(each_obj_dm)
                 else:
                     tmp_obj_dict2[each_obj_dm["name"]].append(each_obj_dm)
@@ -451,7 +454,7 @@ class Ipam:
         for each_rir in self.ipam_rir:
             self.rir.append(self.cr_rir(each_rir))
             # 4b. AGGR: Create Aggregate dictionary
-            if each_rir.get("aggregate") != None:
+            if each_rir.get("aggregate") is not None:
                 for each_aggr in each_rir["aggregate"]:
                     self.aggr.append(self.cr_aggr(each_rir, each_aggr))
         # 4c. ROLE: Create Role dictionary
@@ -461,7 +464,7 @@ class Ipam:
             for each_site in each_role["site"]:
                 tnt = self.nb.get_tnt(each_site["name"])
                 # 4d. VL_GRP: Creates per-site VLAN Group Dictionary
-                if each_site.get("vlan_grp") != None:
+                if each_site.get("vlan_grp") is not None:
                     for each_vlgrp in each_site["vlan_grp"]:
                         vl_grp_tnt = each_vlgrp.get("tenant", tnt)
                         self.vlan_grp.append(
@@ -479,7 +482,7 @@ class Ipam:
                                 )
                             )
                         # 4f. VRF: Creates per-vlan-group VRF Dictionary
-                        if each_vlgrp.get("vrf") != None:
+                        if each_vlgrp.get("vrf") is not None:
                             for each_vrf in each_vlgrp["vrf"]:
                                 vrf_tnt = each_vrf.get("tenant", tnt)
                                 self.vrf.append(self.cr_vrf(vrf_tnt, each_vrf))
@@ -497,7 +500,7 @@ class Ipam:
                                         )
                                     )
                 # 4h. VL_SITE: Creates per-site VLAN Dictionary
-                if each_site.get("vlan") != None:
+                if each_site.get("vlan") is not None:
                     # VLAN: Creates per-vlan-group VLAN Dictionary
                     for each_vl in each_site["vlan"]:
                         self.vlan.append(
@@ -510,13 +513,13 @@ class Ipam:
                             )
                         )
                 # 4i. VRF_WITH_NO_VLANs: If Prefixes do not have VLANs no VL_GRP, the VRF is the main dictionary with PFX dictionaries underneath it
-                if each_site.get("vrf") != None:
+                if each_site.get("vrf") is not None:
                     # VRF: Creates VRF withs its optional settings
                     for each_vrf in each_site["vrf"]:
                         vrf_tnt = each_vrf.get("tenant", tnt)
                         self.vrf.append(self.cr_vrf(vrf_tnt, each_vrf))
                         # 4i. PREFIX: Creates per-vrf Prefix Dictionary, exist if a prefix has no entries ()
-                        if each_vrf["prefix"] == None:
+                        if each_vrf["prefix"] is None:
                             print(
                                 f"⚠️  Prefix: VRF '{each_vrf['name']}' has an empty prefix dictionary, it must be a list of prefix dictionaries or an empty list"
                             )
@@ -584,7 +587,7 @@ class Circuits:
             tags=self.nb.get_or_create_tag(each_pvdr.get("tags")),
         )
         # Optional setting ASN
-        if each_pvdr.get("asn") != None:
+        if each_pvdr.get("asn") is not None:
             tmp_pvdr["asn"] = each_pvdr["asn"]
         return tmp_pvdr
 
@@ -601,9 +604,9 @@ class Circuits:
             tags=self.nb.get_or_create_tag(each_crt.get("tags")),
         )
         # Optional settings Tenant and commit_rate need to be only added if set as empty vlaues breal API calls
-        if each_crt.get("tenant") != None:
+        if each_crt.get("tenant") is not None:
             tmp_crt["tenant"] = dict(name=each_crt["tenant"])
-        if each_crt.get("commit_rate") != None:
+        if each_crt.get("commit_rate") is not None:
             tmp_crt["commit_rate"] = each_crt["commit_rate"]
         return tmp_crt
 
@@ -667,41 +670,41 @@ class Virtualisation:
             comments=each_cltr.get("comment", ""),
         )
         # Optional settings (tenant, site or group), these can be set in cluster or inherited from cluster group
-        type_site = each_type.get("site", None)
-        if each_cltr.get("site", type_site) != None:
+        type_site = each_type.get("site")
+        if each_cltr.get("site", type_site) is not None:
             tmp_cltr["site"] = dict(name=each_cltr.get("site", type_site))
-        type_grp = each_type.get("group", None)
-        if each_cltr.get("group", type_grp) != None:
+        type_grp = each_type.get("group")
+        if each_cltr.get("group", type_grp) is not None:
             tmp_cltr["group"] = dict(name=each_cltr.get("group", type_grp))
-        type_tags = each_type.get("tags", None)
-        if each_cltr.get("tags", type_tags) != None:
+        type_tags = each_type.get("tags")
+        if each_cltr.get("tags", type_tags) is not None:
             tmp_cltr["tags"] = self.nb.get_or_create_tag(
                 each_cltr.get("tags", type_tags)
             )
         # If tenant is undefined in cltr and cltr_grp gets the tenant name from the site (leaves blank if API call fails)
-        if each_type.get("tenant") != None:
-            type_tnt = each_type.get("tenant", None)
-        elif each_type.get("tenant") == None:
+        if each_type.get("tenant") is not None:
+            type_tnt = each_type.get("tenant")
+        elif each_type.get("tenant") is None:
             try:
                 site = each_cltr.get("site", type_site)
                 type_tnt = dict(self.nb.nb.dcim.sites.get(name=site))["tenant"]["name"]
-            except:
+            except (TypeError, RequestError):
                 type_tnt = None
-        if each_cltr.get("tenant", type_tnt) != None:
+        if each_cltr.get("tenant", type_tnt) is not None:
             tmp_cltr["tenant"] = dict(name=each_cltr.get("tenant", type_tnt))
         return tmp_cltr
 
     # ENGINE: Runs all the other methods in this class to create dict used to create nbox objects
     def create_vrtl(self) -> dict[str, Any]:
         # 6a. CLTR_GRP: Create Cluster Group dictionary
-        if self.cluster_group != None:
+        if self.cluster_group is not None:
             for each_grp in self.cluster_group:
                 self.cltr_grp.append(self.cr_cltr_grp(each_grp))
         # 6b. CLTR_TYPE: Create Cluster Type dictionary
         for each_type in self.cluster_type:
             self.cltr_type.append(self.cr_cltr_grp(each_type))
             # 5c. CLTR_TYPE: Create Cluster Type dictionary
-            if each_type.get("cluster") != None:
+            if each_type.get("cluster") is not None:
                 for each_cltr in each_type["cluster"]:
                     self.cltr.append(self.cr_cltr(each_type, each_cltr))
         # 6c. The Data Models returned to the main method that are used to create the objects
@@ -755,13 +758,13 @@ class Contacts:
             tags=self.nb.get_or_create_tag(each_cnt.get("tags")),
         )
         # Optional settings tjhat would break call if set to null
-        if each_cnt.get("phone") != None:
+        if each_cnt.get("phone") is not None:
             tmp_cnt["phone"] = each_cnt["phone"]
-        if each_cnt.get("addr") != None:
+        if each_cnt.get("addr") is not None:
             tmp_cnt["address"] = each_cnt["addr"]
-        if each_cnt.get("email") != None:
+        if each_cnt.get("email") is not None:
             tmp_cnt["email"] = each_cnt["email"]
-        if each_cnt.get("comments") != None:
+        if each_cnt.get("comments") is not None:
             tmp_cnt["comments"] = each_cnt["comments"]
         return tmp_cnt
 
@@ -797,7 +800,7 @@ class Contacts:
         for each_grp in self.contact_grp:
             self.cnt_grp.append(self.cr_cnt_grp(each_grp))
             # 7c. CNT: Creates contact
-            if each_grp.get("contact") != None:
+            if each_grp.get("contact") is not None:
                 for each_cnt in each_grp["contact"]:
                     self.cnt.append(self.cr_cnt(each_grp["name"], each_cnt))
         # 7d ASGN: Assigns contact and role to an object
