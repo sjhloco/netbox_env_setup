@@ -102,7 +102,7 @@ role:
         descr: SUPERNET > AZ1 BLU1 Blue Zone Networks
         pool: True
         status: container
-      - pfx: 10.10.0.0/24
+      - pfx: 10.20.0.0/24
         descr: WAN > Site connections
       - pfx: 10.20.4.0/24
         descr: ACCESS > AZ Blue Management

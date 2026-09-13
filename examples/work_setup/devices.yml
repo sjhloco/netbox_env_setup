@@ -27,7 +27,7 @@ manufacturer:                           # Mandatory - List of all device manufac
       - N9K-C9332C.yaml
       - N9K-C93180YC-FX.yaml
       - WS-C3650-48FS-S.yaml
-      - WS-C6509-E.yml
+      - WS-C6509-E.yaml
 
   - name: Generic
     descr: All patch panels and ISP handoffs

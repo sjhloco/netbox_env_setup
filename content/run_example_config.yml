@@ -114,7 +114,7 @@ records:
   - delay: 2000
     content: "(nbox) macoloco:\e[36mnetbox_env_setup\e[32m (master)\e[34m\e(B\e[m$"
   - delay: 600
-    content: python input_validate.py input_errors
+    content: uv run input_validate.py input_errors
   - delay: 400
     content: "\r\n"
   - delay: 25
@@ -126,7 +126,7 @@ records:
   - delay: 25
     content: "(nbox) macoloco:\e[36mnetbox_env_setup\e[32m (master)\e[34m\e(B\e[m$"
   - delay: 1000
-    content: python nbox_env_setup.py -o simple_example/
+    content: uv run nbox_env_setup.py -o simple_example/
   - delay: 400
     content: "\r\n"
   - delay: 1000
@@ -146,7 +146,7 @@ records:
   - delay: 25
     content: "(nbox) macoloco:\e[36mnetbox_env_setup\e[32m (master)\e[34m\e(B\e[m$"
   - delay: 1000
-    content: python nbox_env_setup.py -o simple_example/
+    content: uv run nbox_env_setup.py -o simple_example/
   - delay: 2000
     content: "\r\n"
   - delay: 25
@@ -166,7 +166,7 @@ records:
   - delay: 25
     content: "(nbox) macoloco:\e[36mnetbox_env_setup\e[32m (master)\e[34m\e(B\e[m$"
   - delay: 1000
-    content: python nbox_env_setup.py simple_example/
+    content: uv run nbox_env_setup.py simple_example/
   - delay: 1000
     content: "\r\n"
   - delay: 400
