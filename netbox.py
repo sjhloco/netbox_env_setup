@@ -1,5 +1,5 @@
 from multiprocessing.connection import Listener
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 import pynetbox
 from pynetbox.core.query import RequestError
 import operator
@@ -40,8 +40,8 @@ class Nbox:
     # OBJ_CHECK: API call to check if objects already exists in Netbox (e.g. Tenants, tenancy.tenants, tnt, name)
     # ----------------------------------------------------------------------------
     def obj_check(
-        self, api_attr: str, obj_fltr: str, obj_dm: Dict[str, Any]
-    ) -> Dict[str, Dict]:
+        self, api_attr: str, obj_fltr: str, obj_dm: List[Dict[str, Any]]
+    ) -> Dict[str, List]:
         # Creates 2 lists of DMs based on whether the object already exists or not
         obj_notexist_dm, obj_exist_name = ([] for i in range(2))
         for each_obj_dm in obj_dm:
@@ -228,8 +228,8 @@ class Nbox:
     # ----------------------------------------------------------------------------
     def get_vlgrp_site_vrf_id(
         self,
-        api_attr: str,
-        obj_fltr: str,
+        api_attr: List[str],
+        obj_fltr: List[str],
         obj_dm: Dict[str, Any],
         error: Dict[str, List],
     ) -> Dict[str, Any]:
@@ -313,7 +313,7 @@ class Nbox:
     # ----------------------------------------------------------------------------
     def get_cnt_asgn_id(
         self, asgn: Dict[str, Any], api_fltr: str, error: List
-    ) -> Dict[str, Any]:
+    ) -> List[Dict[str, Any]]:
         api = asgn["object_type"] + "s"
         tmp_asgn = []
         # GET_ID: Get ID of the object the contact is to be assigned to
@@ -459,7 +459,7 @@ class Nbox:
         return tags
 
     # RT: Gathers ID of existing RT or creates new one and returns ID (list of IDs)
-    def get_or_create_rt(self, rt: List, tnt: str) -> List:
+    def get_or_create_rt(self, rt: Union[List, Dict[str, str]], tnt: str) -> List:
         all_rt = []
         if isinstance(rt, list):
             rt = dict.fromkeys(rt, "")

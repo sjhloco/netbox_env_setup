@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 import yaml
 import os
 from collections import defaultdict
@@ -47,8 +47,8 @@ class Organisation:
         each_loc: Dict[str, Any],
         each_site: Dict[str, Any],
         each_tnt: Dict[str, Any],
-        parent: str,
-    ) -> Dict[str, Any]:
+        parent: Optional[str],
+    ) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
 
         tmp_loc = dict(
             name=each_loc["name"],
@@ -323,7 +323,7 @@ class Ipam:
     def cr_vlan(
         self,
         role: str,
-        site: str,
+        site: Optional[str],
         vl_grp_tnt: str,
         each_vlgrp: str,
         each_vl: Dict[str, Any],
@@ -400,7 +400,7 @@ class Ipam:
         return tmp_pfx
 
     # FIX_DUP: If VRFs or VL_GRP referenced in multiple diff places in input file, stops it trying to create multiple times (picks first occurrence).
-    def fix_duplicate_obj(self, input_obj: Dict[str, Any]) -> Dict[str, Any]:
+    def fix_duplicate_obj(self, input_obj: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         all_objs = []
         tmp_obj_dict1, tmp_obj_dict2 = (defaultdict(list) for i in range(2))
         # Group all Objects with the same name {name: [{obj_dict}]}
