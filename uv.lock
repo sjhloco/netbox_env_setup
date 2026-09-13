@@ -515,7 +515,6 @@ dependencies = [
     { name = "pynetbox" },
     { name = "pyyaml" },
     { name = "rich" },
-    { name = "setuptools" },
     { name = "urllib3" },
 ]
 
@@ -529,10 +528,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "pynetbox", specifier = "==6.6.2" },
+    { name = "pynetbox", specifier = "==7.7.0" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "rich", specifier = "==11.2.0" },
-    { name = "setuptools", specifier = "<81" },
     { name = "urllib3", specifier = "==1.26.8" },
 ]
 
@@ -661,15 +659,15 @@ wheels = [
 
 [[package]]
 name = "pynetbox"
-version = "6.6.2"
+version = "7.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "packaging" },
     { name = "requests" },
-    { name = "six" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ea/c6/269711c733eaf100e70877cc1a6bc9a19747d070f5c257479afb9d4e3ffb/pynetbox-6.6.2.tar.gz", hash = "sha256:83b840aeaed49bacde6962d29f4550e4bd35b2e273e9f65c1f8cbe0883fe74db", size = 62703, upload-time = "2022-04-18T03:28:50.816Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f7/99/dd840cd6a09956b2f762319e9c88c6afcd58b8094a127c7bd0e7017caca1/pynetbox-7.7.0.tar.gz", hash = "sha256:6ebf1a68fe19e3c9528f1fcf214ceee719ace937c5f78f3f33964738e3cd3f25", size = 98206, upload-time = "2026-05-05T21:37:15.863Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e4/37/26597a92264be38bc2ae0f55cef3bd9009e3529a2fb3ceb5f283bb32c5e7/pynetbox-6.6.2-py3-none-any.whl", hash = "sha256:3202e5c253c1c1b5e53c42f8e5475552c068b816e214fe060d98673f7d78c16a", size = 32158, upload-time = "2022-04-18T03:28:49.282Z" },
+    { url = "https://files.pythonhosted.org/packages/8e/bd/43f14b5d0c3f7a801e6bc40295667ae6be262560da063cd240f012410309/pynetbox-7.7.0-py3-none-any.whl", hash = "sha256:48de7c1d23aa0a16e78e76e68a58fbdd72782e13be7f25facafdf325ef0d3640", size = 40047, upload-time = "2026-05-05T21:37:14.9Z" },
 ]
 
 [[package]]
@@ -786,24 +784,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/5f/ea/7f9b938a63ece4bec677ad7f9f7fa02df3383db1949ed93a382441c09a87/ruff-0.16.7-py3-none-win32.whl", hash = "sha256:2ea3470fcebcbc5df2fb0c6f3b90333fa9084c534e0111c038fa4a6ab9f1c4b7", size = 10059082, upload-time = "2026-09-10T18:03:59.632Z" },
     { url = "https://files.pythonhosted.org/packages/39/11/480a6973a927aa653e1cead6a6416008640e03a99d05b34c0434b8c6c366/ruff-0.16.7-py3-none-win_amd64.whl", hash = "sha256:7ac26aca826e9e21d0f1cb25b54ac660760a9fdd094d3e4df9848232be98cfc6", size = 10593368, upload-time = "2026-09-10T18:04:01.999Z" },
     { url = "https://files.pythonhosted.org/packages/8b/4b/51327018d056f0dad2c2238f26d1fb0f53707a9d91b75dea6d1b3039f136/ruff-0.16.7-py3-none-win_arm64.whl", hash = "sha256:aab7f39e2c9df6c596216070f98eef1207b94f8516cca20c808826974971855b", size = 10412401, upload-time = "2026-09-10T18:04:04.098Z" },
-]
-
-[[package]]
-name = "setuptools"
-version = "80.10.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/76/95/faf61eb8363f26aa7e1d762267a8d602a1b26d4f3a1e758e92cb3cb8b054/setuptools-80.10.2.tar.gz", hash = "sha256:8b0e9d10c784bf7d262c4e5ec5d4ec94127ce206e8738f29a437945fbc219b70", size = 1200343, upload-time = "2026-01-25T22:38:17.252Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/94/b8/f1f62a5e3c0ad2ff1d189590bfa4c46b4f3b6e49cef6f26c6ee4e575394d/setuptools-80.10.2-py3-none-any.whl", hash = "sha256:95b30ddfb717250edb492926c92b5221f7ef3fbcc2b07579bcd4a27da21d0173", size = 1064234, upload-time = "2026-01-25T22:38:15.216Z" },
-]
-
-[[package]]
-name = "six"
-version = "1.17.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
 ]
 
 [[package]]
