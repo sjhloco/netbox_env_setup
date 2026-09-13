@@ -18,7 +18,6 @@ When run pass in directory where yaml files are stored. Without flags will try a
 python nbox_env_setup.py simple_example
 """
 
-import config
 import argparse
 from collections import defaultdict
 from typing import Any, Dict
@@ -38,21 +37,20 @@ from dm import Virtualisation
 from dm import Contacts
 
 # ----------------------------------------------------------------------------
-# Variables to change dependant on environment
+# ENV VARS: Either set as env vars or fallback to defaults
 # ----------------------------------------------------------------------------
-# Directory that holds all device type templates
-dvc_type_dir = os.path.join(os.getcwd(), "device_type")
-input_dir = "full_example"
-base_dir = os.getcwd()
-
-# Netbox login details, token (api_token) is stored in non github shared config.py file (create token your user profile or in admin for other users)
-netbox_url = config.netbox_url
-api_token = config.api_token
-
-ssl = False
-# ssl = True
-# If using Self-signed cert rather than disbaling SSL verification (nb.http_session.verify = False) can specify the CA cert
+# Default netbox instance, falls back to docker version on Orb
+NBOX_URL = os.environ.get("NBOX_URL", "http://netbox.netbox-docker.orb.local")
+# Netbox API token (don't include Bearer, just the token) created under user profile
+NBOX_TOKEN = os.environ.get("NBOX_TOKEN")
+# By default use HTTP, if using Self-signed cert disable SSL verification (nb.http_session.verify = False) or specify the CA cert
+SSL = os.environ.get("SSL", False)
 # os.environ['REQUESTS_CA_BUNDLE'] = os.path.expanduser('~/Documents/Coding/Netbox/nbox_py_scripts/myCA.pem')
+# Directory that holds all device type templates (mentioned in the script)
+DVC_TYPE_DIR = os.environ.get("DVC_TYPE_DIR", os.path.join(os.getcwd(), "device_type"))
+# Directory that holds all the .yml/.yaml input files definign netbox objects to be created, default is current working directory
+INPUT_DIR = os.environ.get("INPUT_DIR", os.getcwd())
+
 
 
 # ----------------------------------------------------------------------------
@@ -108,21 +106,21 @@ class Inputs:
         if len(directory) != 0:
             tmp_input_dir = directory[0]
         elif len(directory) == 0:
-            tmp_input_dir = input_dir
+            tmp_input_dir = INPUT_DIR
         return vars(all_args), tmp_input_dir
 
     # 1b. FILE: Loads input file and validates it
     def input_val(self, input_dir: str, args: Dict[str, Any]) -> Dict[str, Any]:
         # VAL_DIR: Check directory exists incurrent location or base directory
         if os.path.exists(input_dir) == False:
-            if os.path.exists(os.path.join(base_dir, input_dir)) == False:
+            if os.path.exists(INPUT_DIR) == False:
                 self.rc.print(
                     f":x: Input File Error - Input file directories '{os.path.join(os.getcwd(), input_dir)}' "
-                    f"or '{os.path.join(base_dir, input_dir)}' do not exist."
+                    f"or '{INPUT_DIR}' do not exist."
                 )
                 sys.exit(1)
             else:
-                input_dir = os.path.join(base_dir, input_dir)
+                input_dir = os.path.join(INPUT_DIR)
 
         # LOAD_FILE: Load the variable files
         my_vars = {}
@@ -168,7 +166,7 @@ def main():
     # Initialise Netbox class used to run Netbox API calls
     tag_exists, tag_created, rt_exists, rt_created = ([] for i in range(4))
     nbox = Nbox(
-        netbox_url, api_token, ssl, tag_exists, tag_created, rt_exists, rt_created
+        NBOX_URL, NBOX_TOKEN, SSL, tag_exists, tag_created, rt_exists, rt_created
     )
     # Used to run all object creation classes if no flags input
     flag_all = False
@@ -190,7 +188,7 @@ def main():
     # 3. DVC_MTFR_TYPE: Create all the objects required to create devices
     if args["device"] == True or flag_all == False:
         dvc = Devices(
-            nbox, my_vars["device_role"], my_vars["manufacturer"], dvc_type_dir
+            nbox, my_vars["device_role"], my_vars["manufacturer"], DVC_TYPE_DIR
         )
         dvc_dict = dvc.create_dvc_type_role()
         # Passed into nbox_call are: Friendly name (for user message), path of api call, filter (to check if object already exists), DM of data

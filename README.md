@@ -2,6 +2,7 @@
 
 This script will create all the objects within the NetBox environment ready for the addition of devices, it does not add the devices themselves. It is not idempotent as the purpose is to add objects rather than edit or delete existing objects. The Netbox environment is defined in YAML files that follow the hierarchical structure of the NetBox menus. The script follows this same structure allowing sub-sections of the environment to be created or additions to be made to an existing section.
 
+!!! CHANGE
 This has been tested against v3.1.7, it wont work on v2.x due to the changes made to the NetBox post v2.8
 
 ## API Engine
@@ -124,40 +125,24 @@ Contacts are actually in the organisation menu but are defined separately as the
 
 ## Installation and Prerequisites
 
-Clone the repository and create a virtual environment.
-
-```css
-git clone https://github.com/sjhloco/sjhloco-netbox_env_setup.git
-python -m venv ~/venv/nbox/
-source ~/venv/nbox/bin/activate
-```
-
-Install the required packages.
+Clone the repository and install the required python packages, the easiest way to do this is with uv as it automatically creates and activates the virtual environment.
 
 ```bash
-cd sjhloco-netbox_env_setup
-pip install -r requirements.txt
+git clone https://github.com/sjhloco/netbox_env_setup.git
+cd netbox_env_setup
+
+uv sync
 ```
 
-The first section of the script holds customisable values for the default base directory and folder name (used if not defined at run time), device-type template directory, disabling SSL verification and SSL cert location (if using HTTPS with a self-signed certificate).
+To get started set the Netbox API URL and token environment variables, everything else is optional.
 
-```bash
-dvc_type_dir = os.path.join(os.getcwd(), "device_type")
-base_dir = os.getcwd()
-input_dir = "full_example"
-
-netbox_url = config.netbox_url
-api_token = config.api_token
-ssl = False
-os.environ['REQUESTS_CA_BUNDLE'] = '/Users/user1/Documents/nbox_py_scripts/myCA.pem'
-```
-
-The token and NetBox API URL is set in a separate `config.py` variable file that I *.gitignore* so as not to share with the rest of the world. This is imported with `import config` so you either need to add this file or remove the import line and add the token and URL directly in the script. All that *config.py* holds is a single token variable:
-
-```bash
-netbox_url = "http://10.30.10.104:8000/"
-api_token = 'my_token_got_from_netbox'
-```
+| Environment variable | Default | Information |
+| -------------------- | ------- | ----------- |
+| `NBOX_URL` | `http://netbox.netbox-docker.orb.local` | Default netbox instance, falls back to docker version on Orb |
+| `NBOX_TOKEN` | n/a | Netbox API token (don't include Bearer, just the token) created under user profile |
+| `SSL` | `False` | To enable HTTPS for netbox API, vy default uses HTTP |
+| `DVC_TYPE_DIR` | `working_dir/device_type` | Directory that holds all device type templates (mentioned in the script) |
+| `INPUT_DIR` | `current_working_directory` | Directory that holds all the .yml/.yaml input files, can also be set at runtime |
 
 ## Usage
 
@@ -170,7 +155,7 @@ Before running ***nbox_env_setup.py*** it is recommended to use ***input_validat
 - All referenced objects such as tenant, site, rack_role, etc, exist within the input file. If you are not running all tests (for example don't have organisation defined) you will get dependency warnings as it will look for objects such as sites and tenants which don't exist. Can either ignore these or add them to the  *all_site*, *all_tnt* and *all_obj* lists to stop the warnings
 
 ```bash
-python input_validate.py simple_example
+python input_validate.py "examples/simple1"
 ```
 
 The script can be run with no flags to create all objects or with flags to only create specific section objects.
@@ -186,7 +171,7 @@ The script can be run with no flags to create all objects or with flags to only 
 | none | Create everything
 
 ```python
-python nbox_env_setup.py simple_example
+python nbox_env_setup.py "examples/simple1"
 ```
 
 There are three possible outcomes from the attempt to create each object which are relayed back in stdout:\
@@ -205,3 +190,7 @@ pytest -vv
 pytest tests/test_dm.py -vv
 pytest tests/test_netbox.py -vv
 ```
+
+## AI Disclaimer
+
+Everything up to 2026-09-13 was written without AI assistance. Since then, some changes are made with AI assistance (mainly Claude Code).

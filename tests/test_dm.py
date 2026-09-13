@@ -20,11 +20,11 @@ import tests.test_files.device_types as device_types
 test_dir = os.path.dirname(__file__)
 test_input = os.path.join(test_dir, "test_files", "test_inputs.yml")
 dvc_type_dir = os.path.join(test_dir, "test_files")
-# For docker test environment
-token = "0123456789abcdef0123456789abcdef01234567"
-# netbox_url = "http://10.10.10.104:8000"
-netbox_url = "http://10.30.10.104:8000"
 
+# Default netbox instance, token and SSL verification, falls back to docker version on Orb
+NBOX_URL = os.environ.get("NBOX_URL", "http://netbox.netbox-docker.orb.local")
+NBOX_TOKEN = os.environ.get("NBOX_TOKEN")
+SSL = os.environ.get("SSL", False)
 
 # ----------------------------------------------------------------------------
 # Fixture to initialise Nornir and load inventory
@@ -37,7 +37,7 @@ def load_vars():
         my_vars = yaml.load(file_content, Loader=yaml.FullLoader)
 
     tag_exists, tag_created, rt_exists, rt_created = ([] for i in range(4))
-    nbox = Nbox(netbox_url, token, False, tag_exists, tag_created, rt_exists, rt_created)
+    nbox = Nbox(NBOX_URL, NBOX_TOKEN, SSL, tag_exists, tag_created, rt_exists, rt_created)
 
 
 # Load the vars for Organisation class
