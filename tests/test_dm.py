@@ -37,7 +37,7 @@ def load_vars():
         my_vars = yaml.load(file_content, Loader=yaml.FullLoader)
 
     tag_exists, tag_created, rt_exists, rt_created = ([] for i in range(4))
-    nbox = Nbox(netbox_url, token, tag_exists, tag_created, rt_exists, rt_created)
+    nbox = Nbox(netbox_url, token, False, tag_exists, tag_created, rt_exists, rt_created)
 
 
 # Load the vars for Organisation class
@@ -712,14 +712,14 @@ class TestContacts:
         desired_cnt_asgn = [
             {
                 "contact": cnt_asgn["contact"],
-                "content_type": "tenancy." + list(cnt_asgn["assign_to"].keys())[0],
+                "object_type": "tenancy." + list(cnt_asgn["assign_to"].keys())[0],
                 "object_id": cnt_asgn["assign_to"]["tenant"],
                 "priority": "primary",
                 "role": {"name": cnt_asgn["role"]},
             },
             {
                 "contact": cnt_asgn["contact"],
-                "content_type": "dcim." + list(cnt_asgn["assign_to"].keys())[1],
+                "object_type": "dcim." + list(cnt_asgn["assign_to"].keys())[1],
                 "object_id": cnt_asgn["assign_to"]["site"],
                 "priority": "primary",
                 "role": {"name": cnt_asgn["role"]},

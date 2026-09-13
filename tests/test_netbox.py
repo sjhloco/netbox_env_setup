@@ -139,17 +139,18 @@ def del_nbox_obj(nb, api_attr, obj_fltr, obj_name):
         obj_fltr = "prefix"
         try:
             fltr = {obj_fltr: obj_name, "vrf_id": nb.ipam.vrfs.get(name=vrf).id}
-        except RequestError as e:
+        except (RequestError, ValueError) as e:
             print(
                 f"❌ An error was raised deleting netbox unit test '{api_attr}' object '{obj_name}'  - {e}"
             )
+            return
     else:
         fltr = {obj_fltr: obj_name}
     try:
         if operator.attrgetter(api_attr)(nb).get(**fltr) != None:
             obj = operator.attrgetter(api_attr)(nb).get(**fltr)
             obj.delete()
-    except RequestError as e:
+    except (RequestError, ValueError) as e:
         print(
             f"❌ An error was raised deleting netbox unit test '{api_attr}' object '{obj_name}'  - {e}"
         )
@@ -399,7 +400,7 @@ class TestNbox:
         err_msg = "❌ get_cnt_asgn_id: Gathering ID of object to assign contact failed"
         desired_result = "UTEST Contact UTEST_tenant2 (tenant)"
         asgn_dict = {
-            "content_type": "tenancy.tenant",
+            "object_type": "tenancy.tenant",
             "object_id": tnt2,
             "contact": [contact],
             "role": {"name": cnt_role["name"]},
@@ -417,7 +418,7 @@ class TestNbox:
         )
         desired_result = ["tenant - no_tenant"]
         asgn_dict = {
-            "content_type": "tenancy.tenant",
+            "object_type": "tenancy.tenant",
             "object_id": "no_tenant",
             "contact": [contact],
             "role": {"name": cnt_role["name"]},
@@ -432,7 +433,7 @@ class TestNbox:
         err_msg = "❌ get_cnt_asgn_id: Gathering of contact ID to assign to object error failed"
         desired_result = ["content - no_contact"]
         asgn_dict = {
-            "content_type": "tenancy.tenant",
+            "object_type": "tenancy.tenant",
             "object_id": tnt2,
             "contact": ["no_contact"],
             "role": {"name": cnt_role["name"]},
