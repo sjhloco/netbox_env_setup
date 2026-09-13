@@ -735,7 +735,7 @@ class Contacts:
                 api = "dcim." + obj_type
             tmp_asgn.append(
                 dict(
-                    content_type=api,
+                    object_type=api,
                     object_id=obj,
                     contact=each_asgn["contact"],
                     role={"name": each_asgn["role"]},

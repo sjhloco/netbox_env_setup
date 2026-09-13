@@ -103,11 +103,10 @@ class Nbox:
             except RequestError as e:
                 # ERR: Message is a string but has the format of list of dicts, literal_eval converts back into a list
                 err_msg = ast.literal_eval(e.error)
-                for err in err_msg:
+                for err in err_msg["errors"]:
                     if len(err) != 0:  # safe guards against empty dicts
-                        self.rc.print(
-                            f":x: {output_name} '{list(err.keys())[0]}' - {', '.join(list(err.values())[0])}"
-                        )
+                        for obj, msg in err["errors"].items():
+                            self.rc.print(f":x: {output_name} '{obj}' - {', '.join(msg)}")    
         # If result variable exists means an object was created
         if "result" in locals():
             all_result = result
@@ -315,7 +314,7 @@ class Nbox:
     def get_cnt_asgn_id(
         self, asgn: Dict[str, Any], api_fltr: str, error: List
     ) -> Dict[str, Any]:
-        api = asgn["content_type"] + "s"
+        api = asgn["object_type"] + "s"
         tmp_asgn = []
         # GET_ID: Get ID of the object the contact is to be assigned to
         try:
@@ -335,19 +334,19 @@ class Nbox:
                     asgn_copy["contact"] = cnt_id
                     # CHK: Create dictionary used for checking if assignment already exists
                     asgn_copy["chk_fltr"] = {
-                        "content_type": asgn["content_type"],
+                        "object_type": asgn["object_type"],
                         "object_id": obj_id,
                         "contact_id": cnt_id,
                     }
                     # IDNTY: Used to identify obj in the already exist list (obj["exist_name"])
                     asgn_copy[
                         "multi-fltr"
-                    ] = f"{each_cnt} {asgn['object_id']} ({asgn['content_type'].split('.')[1]})"
+                    ] = f"{each_cnt} {asgn['object_id']} ({asgn['object_type'].split('.')[1]})"
                     tmp_asgn.append(asgn_copy)
                 except:
                     error.append(f"content - {each_cnt}")
         except:
-            error.append(f"{asgn['content_type'].split('.')[1]} - {asgn['object_id']}")
+            error.append(f"{asgn['object_type'].split('.')[1]} - {asgn['object_id']}")
 
         return tmp_asgn
 
@@ -390,7 +389,7 @@ class Nbox:
             for each_asgn in obj_dm:
                 # NAME: Try get ID of the object the contact is to be assigned to using object name
                 try:
-                    if each_asgn["content_type"] == "circuits.circuit":
+                    if each_asgn["object_type"] == "circuits.circuit":
                         tmp_fltr = "cid"
                     else:
                         tmp_fltr = "name"
@@ -402,14 +401,14 @@ class Nbox:
                     # If cant get the ID add object to error list
                     except:
                         err.append(
-                            f"{each_asgn['content_type'].split('.')[1]} - {each_asgn['object_id']}"
+                            f"{each_asgn['object_type'].split('.')[1]} - {each_asgn['object_id']}"
                         )
             if len(err) != 0:
                 self.rc.print(
                     f":x: {output_name}: Can't get the ID for the name or slug of: '{', '.join(set(err))}'"
                 )
             obj_dm = tmp_obj_dm
-
+            
         # CHK_OBJ: Check if object already exists.
         if len(obj_dm) != 0:
             obj = self.obj_check(api_attr, obj_fltr, obj_dm)
