@@ -271,8 +271,8 @@ class DevicesSetup:
     mftr_sw: dict[str, Any]
     mftr_pp: dict[str, Any]
     pltm: dict[str, Any]
-    dev_type_swi: dict[str, Any]
-    dev_type_pp: dict[str, Any]
+    dev_type_swi: str
+    dev_type_pp: str
 
 
 @pytest.fixture(scope="class")

@@ -387,6 +387,7 @@ class TestNbox:
         actual_result = nbox.get_vlgrp_site_vrf_id(
             ["", "ipam.vlan_groups"], ["name", "group_id"], vlan_dict, defaultdict(list)
         )
+        assert actual_result is not None, err_msg
         assert actual_result["multi-fltr"] == nbox_env.vlan["name"], err_msg
         assert actual_result["chk_fltr"]["name"] == nbox_env.vlan["name"], err_msg
         assert isinstance(actual_result["chk_fltr"]["group_id"], int), err_msg
@@ -400,6 +401,7 @@ class TestNbox:
         actual_result = nbox.get_vlgrp_site_vrf_id(
             ["ipam.vlans", ""], ["name", "group_id"], vlan_dict, defaultdict(list)
         )
+        assert actual_result is not None, err_msg
         assert actual_result["multi-fltr"] == nbox_env.vlan["name"], err_msg
         assert actual_result["chk_fltr"]["name"] == nbox_env.vlan["name"], err_msg
         assert isinstance(actual_result["chk_fltr"]["site_id"], int), err_msg
@@ -413,6 +415,7 @@ class TestNbox:
         actual_result = nbox.get_vlgrp_site_vrf_id(
             ["", "ipam.vrfs"], ["prefix", "vrf_name"], pfx_dict, defaultdict(list)
         )
+        assert actual_result is not None, err_msg
         assert actual_result["multi-fltr"] == nbox_env.pfx["pfx"], err_msg
         assert actual_result["chk_fltr"]["prefix"] == nbox_env.pfx["pfx"], err_msg
         assert isinstance(actual_result["chk_fltr"]["vrf_name"], int), err_msg
@@ -452,6 +455,7 @@ class TestNbox:
             vl_grp=nbox_env.vl_grp,
         )
         actual_result = nbox.get_vl_pfx_id(pfx_dict, defaultdict(list))
+        assert actual_result is not None, err_msg
         assert isinstance(actual_result.get("vlan"), int), err_msg
 
     # 1k. VL_PFX_ERR: Test getting unique VLAN ID to be used by a prefix error
