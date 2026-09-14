@@ -1,5 +1,6 @@
-## Input variables used to test assert script error handling
-# Doesnt include testing lists as they cause the script to 'failfast' so would not test the objects under them
+## Tests input_validate.py script, these variables assert script error handling
+## Doesn't include testing lists as they cause the script to 'failfast' so would not test the objects under them
+## uv run input_validate.py tests
 
 # ----------------------------------------------------------------------------
 # Organisational Menu testing
