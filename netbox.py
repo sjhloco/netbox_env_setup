@@ -5,7 +5,7 @@ from multiprocessing.connection import Listener
 from typing import Any, cast
 
 import pynetbox
-import urllib3  # type: ignore[import-untyped]
+import urllib3
 from pynetbox.core.query import RequestError
 from rich.console import Console
 from rich.theme import Theme
