@@ -816,7 +816,8 @@ def desired_cltr1(vrtl_setup: VirtualisationSetup) -> dict[str, Any]:
         "comments": vrtl_setup.cltr1["comment"],
         "group": {"name": vrtl_setup.cltr_type["group"]},
         "name": vrtl_setup.cltr1["name"],
-        "site": {"name": vrtl_setup.cltr_type["site"]},
+        "scope_type": "dcim.site",
+        "scope_id": vrtl_setup.cltr_type["site"],
         "tenant": {"name": vrtl_setup.cltr_type["tenant"]},
         "type": {"name": vrtl_setup.cltr_type["name"]},
     }
@@ -828,7 +829,8 @@ def desired_cltr2(vrtl_setup: VirtualisationSetup) -> dict[str, Any]:
         "comments": "",
         "group": {"name": vrtl_setup.cltr2["group"]},
         "name": vrtl_setup.cltr2["name"],
-        "site": {"name": vrtl_setup.cltr2["site"]},
+        "scope_type": "dcim.site",
+        "scope_id": vrtl_setup.cltr2["site"],
         "tenant": {"name": vrtl_setup.cltr2["tenant"]},
         "type": {"name": vrtl_setup.cltr_type["name"]},
     }

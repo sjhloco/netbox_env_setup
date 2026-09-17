@@ -476,6 +476,24 @@ class TestNbox:
         nbox.get_vl_pfx_id(pfx_dict, error)
         assert error == desired_result, err_msg
 
+    # 1k2. CLTR_SCOPE: Test getting site ID for a Cluster's scope_id
+    def test_get_cltr_scope_id(self, nbox: Nbox, nbox_env: NboxEnv) -> None:
+        err_msg = "❌ get_cltr_scope_id: Gathering site ID for Cluster scope_id failed"
+        cltr_dict = {"name": "UTEST_cluster", "scope_id": nbox_env.site}
+        actual_result = nbox.get_cltr_scope_id(cltr_dict, [])
+        assert actual_result is not None, err_msg
+        assert isinstance(actual_result.get("scope_id"), int), err_msg
+
+    # 1k3. CLTR_SCOPE_ERR: Test getting site ID for a Cluster's scope_id error
+    def test_get_cltr_scope_id_err(self, nbox: Nbox, nbox_env: NboxEnv) -> None:
+        err_msg = "❌ get_cltr_scope_id: Gathering site ID for Cluster scope_id error failed"
+        desired_result = ["no_site"]
+        cltr_dict = {"name": "UTEST_cluster", "scope_id": "no_site"}
+        error: list[str] = []
+        actual_result = nbox.get_cltr_scope_id(cltr_dict, error)
+        assert actual_result is None, err_msg
+        assert error == desired_result, err_msg
+
     # 1l. CNT_ASGN: Test getting ID of object to assign contact to
     def test_get_cnt_asgn_id(self, nbox: Nbox, nbox_env: NboxEnv) -> None:
         err_msg = "❌ get_cnt_asgn_id: Gathering ID of object to assign contact failed"

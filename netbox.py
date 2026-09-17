@@ -314,6 +314,23 @@ class Nbox:
         return None
 
     # ----------------------------------------------------------------------------
+    # CLTR_SCOPE_ID: Gets the site ID used for a Cluster's scope_id (scope_type/scope_id replaced Cluster.site in Netbox 4.2)
+    # ----------------------------------------------------------------------------
+    def get_cltr_scope_id(
+        self, cltr: dict[str, Any], error: list[str]
+    ) -> dict[str, Any] | None:
+        site = cltr.get("scope_id")
+        if site is None:
+            return cltr
+        site_obj = self.nb.dcim.sites.get(name=site)
+        # SITE_NOT_EXIST: If the site does not exist collects details for message
+        if site_obj is None:
+            error.append(site)
+            return None
+        cltr["scope_id"] = site_obj.id
+        return cltr
+
+    # ----------------------------------------------------------------------------
     # CNT_ASGN_ID: Gets the ID for the assignment objects and contacts
     # ----------------------------------------------------------------------------
     def get_cnt_asgn_id(
@@ -426,6 +443,20 @@ class Nbox:
                     f":x: {output_name}: Can't get the ID for the name or slug of: '{', '.join(set(cnt_asgn_err))}'"
                 )
             obj_dm = cnt_asgn_obj_dm
+
+        # CLTR: Resolve the site name in scope_id to a real site ID (scope_type/scope_id replaced Cluster.site in Netbox 4.2)
+        elif output_name == "Cluster":
+            cltr_obj_dm: list[dict[str, Any]] = []
+            cltr_err: list[str] = []
+            for each_cltr in obj_dm:
+                tmp = self.get_cltr_scope_id(each_cltr, cltr_err)
+                if tmp is not None:
+                    cltr_obj_dm.append(tmp)
+            if len(cltr_err) != 0:
+                self.rc.print(
+                    f":x: {output_name}: The site '{', '.join(set(cltr_err))}' does not exist"
+                )
+            obj_dm = cltr_obj_dm
 
         # CHK_OBJ: Check if object already exists.
         assert isinstance(api_attr, str)

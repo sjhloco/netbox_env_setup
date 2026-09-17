@@ -671,8 +671,11 @@ class Virtualisation:
         )
         # Optional settings (tenant, site or group), these can be set in cluster or inherited from cluster group
         type_site = each_type.get("site")
-        if each_cltr.get("site", type_site) is not None:
-            tmp_cltr["site"] = dict(name=each_cltr.get("site", type_site))
+        site = each_cltr.get("site", type_site)
+        if site is not None:
+            # NetBox 4.2+ replaced Cluster.site with generic scope_type/scope_id; site name resolved to an ID in Nbox.get_cltr_scope_id
+            tmp_cltr["scope_type"] = "dcim.site"
+            tmp_cltr["scope_id"] = site
         type_grp = each_type.get("group")
         if each_cltr.get("group", type_grp) is not None:
             tmp_cltr["group"] = dict(name=each_cltr.get("group", type_grp))
@@ -686,7 +689,6 @@ class Virtualisation:
             type_tnt = each_type.get("tenant")
         elif each_type.get("tenant") is None:
             try:
-                site = each_cltr.get("site", type_site)
                 type_tnt = dict(self.nb.nb.dcim.sites.get(name=site))["tenant"]["name"]
             except (TypeError, RequestError):
                 type_tnt = None
